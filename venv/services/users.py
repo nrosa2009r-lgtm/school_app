@@ -1,10 +1,12 @@
-from security.sec import hash_password
+from security.sec import hash_password, password_validator
 from database.db import Users,async_session , is_exist
 from log.log_generator import create_log
 
 async def add_user(name:str,last_name:str,email:str,password:str):    
     if await is_exist(data=email,parm="email"):
         create_log(level="warning",message=f"Wykryto próbę utworzena konta które już istnieje!")
+    elif await password_validator(password=password):
+        create_log(level="warning",message=f"Hasło nie spełnia wymogów bepieczeństwa!")
     else:
         new_user = Users(
             name=name.lower(),
