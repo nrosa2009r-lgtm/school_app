@@ -6,7 +6,7 @@ async def main():
     print("Rozpoczynam tworzenie bazy danych...")
     await create_db()
     print("Baza danych i tabele zostały pomyślnie utworzone!")
-    await add_user("natan","rosa","nrpl350@gmail.com","Trawis8!")
+    await add_user("natan","rosa","nrpl350gmail.com","Trawis8!")
 
 
 if __name__ == "__main__":

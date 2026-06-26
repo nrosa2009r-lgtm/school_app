@@ -1,4 +1,5 @@
 import asyncio
+from log.log_generator import create_log
 from sqlalchemy import ForeignKey, String, select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine, AsyncSession
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -24,12 +25,24 @@ class Users(Base):
     is_active: Mapped[bool] = mapped_column(default=False)
     u_class: Mapped[str] = mapped_column(String(10),nullable=True)
 
+async def is_exist(data:str,parm:str) -> bool:
+    column = getattr(Users, parm)
+    query = select(Users).where(column == data)
+    async with async_session.begin() as session:
+        result = await session.execute(query)
+        user = result.scalars().first()
+    return user is not None
 # Create db file
 async def create_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     
     async with async_session.begin() as session:
-        root = Users(name="root_admin",email="nrpl350@gmail.com",role="root_admin",password="12345678",is_active=True)
-        session.add(root)
-        print("pomyślnie dodano root admina")
+        if await is_exist("root_admin","role"):
+            create_log(level="error",message=f"root_admin już istneje!!!")
+        else:
+            root = Users(name="root_admin",email="nrpl350@gmail.com",role="root_admin",password="12345678",is_active=True)
+            session.add(root)
+        
+
+
