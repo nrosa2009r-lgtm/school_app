@@ -1,4 +1,4 @@
-from security.sec import hash_password, password_validator
+from security.sec import hash_password, password_validator, encrypt_data
 from database.db import Users,async_session , is_exist
 from log.log_generator import create_log
 
@@ -9,9 +9,9 @@ async def add_user(name:str,last_name:str,email:str,password:str):
         create_log(level="warning",message=f"Hasło nie spełnia wymogów bepieczeństwa!")
     else:
         new_user = Users(
-            name=name.lower(),
-            last_name=last_name.lower(),
-            email=email,
+            name=encrypt_data(name.lower()),
+            last_name=encrypt_data(last_name.lower()),
+            email=encrypt_data(email),
             role="user",
             password=hash_password(password)
         )

@@ -1,5 +1,6 @@
 import string
 import bcrypt as bct
+from config.conf import get_data
 from cryptography.fernet import Fernet
 def hash_password(password) ->str:
     pwd_bytes = password.encode("utf-8")
@@ -24,3 +25,13 @@ async def password_validator(password) ->bool:
 def gen_key():
     key = Fernet.generate_key()
     return key
+
+def encrypt_data(data):
+    key = Fernet(get_data("MASTER_KEY").encode('utf-8'))
+    encrypted_data = key.encrypt(data.encode())
+    return encrypted_data.decode('utf-8')
+
+def decrypt_data(data):
+    key = Fernet(get_data("MASTER_KEY").encode('utf-8'))
+    decrypted_data = key.decrypt(data).decode('utf-8')
+    return decrypted_data
