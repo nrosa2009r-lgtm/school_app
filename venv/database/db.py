@@ -3,9 +3,10 @@ from log.log_generator import create_log
 from sqlalchemy import ForeignKey, String, select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine, AsyncSession
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from config.get_variable import db_url
+from config.conf import get_data
 
 # Create engine and session
+db_url = get_data("DATABASE_URL")
 engine = create_async_engine(db_url, echo=True)
 async_session = async_sessionmaker(engine, expire_on_commit=False)
 
@@ -36,6 +37,7 @@ async def is_exist(data:str,parm:str) -> bool:
 async def create_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        create_log(level="info",message="Pomyślnie utworzono bazę danych")
     
     async with async_session.begin() as session:
         if await is_exist("root_admin","role"):
@@ -43,6 +45,7 @@ async def create_db():
         else:
             root = Users(name="root_admin",email="nrpl350@gmail.com",role="root_admin",password="12345678",is_active=True)
             session.add(root)
+            create_log(level="info",message="Utworzono root_admina")
         
 
 

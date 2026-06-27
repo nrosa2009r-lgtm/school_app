@@ -1,6 +1,6 @@
 import string
 import bcrypt as bct
-
+from cryptography.fernet import Fernet
 def hash_password(password) ->str:
     pwd_bytes = password.encode("utf-8")
     hashed = bct.hashpw(pwd_bytes,bct.gensalt())
@@ -20,3 +20,4 @@ async def password_validator(password) ->bool:
     if not any(char in string.punctuation for char in password):
         return False
     return True
+

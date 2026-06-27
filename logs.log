@@ -1,0 +1,24 @@
+2026-06-27 11:25:07,460 - INFO - Pomyślnie utworzono bazę danych
+2026-06-27 11:25:07,460 - INFO - COMMIT
+2026-06-27 11:25:07,464 - INFO - BEGIN (implicit)
+2026-06-27 11:25:07,467 - INFO - SELECT users.id, users.name, users.last_name, users.email, users.role, users.password, users.is_active, users.u_class 
+FROM users 
+WHERE users.role = ?
+2026-06-27 11:25:07,467 - INFO - [generated in 0.00028s] ('root_admin',)
+2026-06-27 11:25:07,468 - INFO - COMMIT
+2026-06-27 11:25:07,469 - INFO - Utworzono root_admina
+2026-06-27 11:25:07,469 - INFO - BEGIN (implicit)
+2026-06-27 11:25:07,470 - INFO - INSERT INTO users (name, last_name, email, role, password, is_active, u_class) VALUES (?, ?, ?, ?, ?, ?, ?)
+2026-06-27 11:25:07,471 - INFO - [generated in 0.00024s] ('root_admin', None, 'nrpl350@gmail.com', 'root_admin', '12345678', 1, None)
+2026-06-27 11:25:07,472 - INFO - COMMIT
+2026-06-27 11:25:07,478 - INFO - BEGIN (implicit)
+2026-06-27 11:25:07,479 - INFO - SELECT users.id, users.name, users.last_name, users.email, users.role, users.password, users.is_active, users.u_class 
+FROM users 
+WHERE users.email = ?
+2026-06-27 11:25:07,479 - INFO - [generated in 0.00024s] ('nrpl350gmail.com',)
+2026-06-27 11:25:07,480 - INFO - COMMIT
+2026-06-27 11:25:07,688 - INFO - BEGIN (implicit)
+2026-06-27 11:25:07,689 - INFO - INSERT INTO users (name, last_name, email, role, password, is_active, u_class) VALUES (?, ?, ?, ?, ?, ?, ?)
+2026-06-27 11:25:07,689 - INFO - [generated in 0.00029s] ('natan', 'rosa', 'nrpl350gmail.com', 'user', '$2b$12$OrR1ZNyVZqmdINlX5Bhv8OEauCr79HXgZRfOGT3T3z776EvET35.u', 0, None)
+2026-06-27 11:25:07,690 - INFO - COMMIT
+2026-06-27 11:25:07,694 - INFO - Pomyślnie utworzono urzytkownika-natan.
