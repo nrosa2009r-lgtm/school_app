@@ -10,14 +10,7 @@ async def main():
     if not existing_key:
         put_key(key="MASTER_KEY", value=gen_key())
         
-    # 2. Tworzenie czystego pliku bazy
     await create_db()
-    
-    # 3. KROK REJESTRACJI (Uruchom ten kod, aby dodać świeży rekord)
-    await add_user("natan", "rosa", "czysty-test@gmail.com", "Trawis8!")
-    
-    # 4. KROK USUNIĘCIA (Uruchom dokładnie z tym samym mailem i hasłem)
-    await del_user("czysty-test@gmail.com", "Trawis8!")
 
 if __name__ == "__main__":
     asyncio.run(main())
