@@ -6,8 +6,8 @@ from log.log_generator import create_log
 def get_data(key:str):
     with open("venv/config/conf.json","r",encoding="utf-8") as file:
         data = json.load(file)
-        search = data[key]
-        return search
+        
+        return data.get(key)
 #Inserting data into config file
 def put_data(key:str,value:str):
     with open("venv/config/conf.json","w",encoding="utf-8") as file:

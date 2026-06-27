@@ -1,5 +1,10 @@
-async def get_user_by_email(email: str) -> Users | None:
+async def get_user_id_by_email(email: str) -> int | None:
     async with async_session() as session:
-        query = select(Users.where(Users.email == email))
+        # 1. Wybieramy tylko kolumnę id, a .where() dajemy POZA nawiasem tabeli
+        query = select(Users.id).where(Users.email == email)
+        
+        # 2. Wykonujemy zapytanie
         result = await session.execute(query)
-        return result.scalar_one_or_none()  # Zwraca obiekt Users lub None
+        
+        # 3. Zwracamy pojedynczą wartość (id) lub None
+        return result.scalar_one_or_none()

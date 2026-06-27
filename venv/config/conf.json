@@ -1,3 +1,4 @@
 {
-    "DATABASE_URL": "sqlite+aiosqlite:///venv/database/database.db"
+    "DATABASE_URL": "sqlite+aiosqlite:///venv/database/database.db",
+    "MASTER_KEY": "MG3MNocJzzmbw9I8Qy0HrOLboGRJ1Qq3pntyecEGeX8="
 }
