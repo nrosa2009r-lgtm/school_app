@@ -2,6 +2,7 @@ from security.sec import hash_password, password_validator, encrypt_data
 from database.db import Users,async_session , is_exist
 from log.log_generator import create_log
 
+# Adding new users
 async def add_user(name:str,last_name:str,email:str,password:str):    
     if await is_exist(data=email,parm="email"):
         create_log(level="warning",message=f"Wykryto próbę utworzena konta które już istnieje!")

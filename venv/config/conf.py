@@ -1,12 +1,14 @@
 import os
 import json
 from log.log_generator import create_log
+
+#Geting parameters from config file
 def get_data(key:str):
     with open("venv/config/conf.json","r",encoding="utf-8") as file:
         data = json.load(file)
         search = data[key]
         return search
-    
+#Inserting data into config file
 def put_data(key:str,value:str):
     with open("venv/config/conf.json","w",encoding="utf-8") as file:
         data = {
@@ -14,7 +16,7 @@ def put_data(key:str,value:str):
         }
         json.dump(data,file,indent=4)
         create_log(level="info",message=f"W konfiguracjii dodano wpis {key}:{value}")
-
+#Inserting key into config file
 def put_key(key:str,value:bytes):
     path = "venv/config/conf.json"
     if os.path.exists(path):

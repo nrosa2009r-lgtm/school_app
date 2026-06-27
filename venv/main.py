@@ -5,7 +5,9 @@ from security.sec import gen_key
 from config.conf import put_key
 
 async def main():
+    # Generating and Saving key
     put_key(key="MASTER_KEY",value=gen_key())
+    # Creating db
     await create_db()
     
     await add_user("natan","rosa","nrpl350gmail.com","Trawis8!")

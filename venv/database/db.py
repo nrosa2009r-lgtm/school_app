@@ -29,7 +29,6 @@ class Users(Base):
 
 # Chcking is user exist
 async def is_exist(data:str,parm:str) -> bool:
-    column = getattr(Users, parm)
 
     query = select(Users)  
     
@@ -37,7 +36,7 @@ async def is_exist(data:str,parm:str) -> bool:
         result = await session.execute(query)
         users = result.scalars().all()
     
-    # 2. Deszyfrujesz i sprawdzasz dopasowanie w Pythonie
+    #Serching in db
     for user in users:
         encrypted_value = getattr(user, parm)
         try:
@@ -47,6 +46,10 @@ async def is_exist(data:str,parm:str) -> bool:
             continue 
             
     return False
+
+        
+
+
 # Create db file
 async def create_db():
     async with engine.begin() as conn:
