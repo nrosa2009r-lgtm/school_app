@@ -21,3 +21,6 @@ async def password_validator(password) ->bool:
         return False
     return True
 
+def gen_key():
+    key = Fernet.generate_key()
+    return key
