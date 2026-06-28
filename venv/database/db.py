@@ -1,8 +1,10 @@
 import asyncio
+from typing import List, Optional
+from datetime import datetime
 from log.log_generator import create_log
-from sqlalchemy import ForeignKey, String, select,delete,update
+from sqlalchemy import ForeignKey, String, select,delete,update,DateTime,Numeric
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine, AsyncSession
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column,relationship
 from config.conf import get_data
 from security.sec import decrypt_data, hash_password,encrypt_data
 
@@ -18,14 +20,50 @@ class Base(DeclarativeBase):
 class Users(Base):
     __tablename__ = "users"
     # Users parameters
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True, nullable=False)
+    id: Mapped[int] = mapped_column(primary_key=True, nullable=False)
     name: Mapped[str] = mapped_column( nullable=False)
     last_name: Mapped[str] = mapped_column( nullable=True)
     email: Mapped[str] = mapped_column( nullable=False, unique=True)
     role: Mapped[str] = mapped_column(String(10), nullable=False)   #rootadmin/admin/teacher/student
     password: Mapped[str] = mapped_column(String(256), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     is_active: Mapped[bool] = mapped_column(default=False)
     u_class: Mapped[str] = mapped_column(nullable=True)
+
+class MenuCategories(Base):
+    __tablename__ = "menu_categories"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(nullable=False)
+
+    items: Mapped[List["MenuItems"]] = relationship(back_populates="category")
+
+class MenuItems(Base):
+    __tablename__ = "menu_items"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    category_id: Mapped[int] = mapped_column(ForeignKey("menu_categories.id"),nullable=False)
+    sku:Mapped[int] = mapped_column(nullable=False,unique=True,autoincrement=True)
+    name:Mapped[str] = mapped_column(nullable=False,unique=True)
+    descryption:Mapped[Optional[str]] = mapped_column(String(500))
+    image_url: Mapped[Optional[str]] = mapped_column(String(256))
+    price:Mapped[float] = mapped_column(Numeric(10,2),nullable=False)
+    prep_price:Mapped[float] = mapped_column(Numeric(10,2),nullable=True)
+    is_avelible:Mapped[bool] = mapped_column(default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    category: Mapped["MenuCategories"] = relationship(back_populates="items")
+    options:Mapped[List["MenuOptions"]] = relationship(back_populates="menu_item",cascade="all,delete-orphan")
+class MenuOptions(Base):
+    __tablename__ = "menu_options"
+
+    id:Mapped[int] = mapped_column(primary_key=True,autoincrement=True)
+    menu_item_id:Mapped[int] = mapped_column(ForeignKey("menu_items.id"))
+    option_type:Mapped[str] = mapped_column(nullable=False)
+    option_name:Mapped[str] = mapped_column(unique=True,nullable=False)
+    add_to_price:Mapped[float] = mapped_column(nullable=False)
+
+    menu_item: Mapped["MenuItems"] = relationship(back_populates="options")
+
 
 # Chcking is user exist
 async def is_exist(data:str,parm:str) -> bool:
