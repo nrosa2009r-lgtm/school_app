@@ -8,15 +8,25 @@ def get_data(key:str):
         data = json.load(file)
         
         return data.get(key)
+    
+
 #Inserting data into config file
-def put_data(key:str,value:str):
-    with open("venv/config/conf.json","w",encoding="utf-8") as file:
-        data = {
-            key:value
-        }
-        json.dump(data,file,indent=4)
-        create_log(level="info",message=f"W konfiguracjii dodano wpis {key}:{value}")
-#Inserting key into config file
+def put_data(key: str, value: str):
+    file_path = "venv/config/conf.json"
+    data = {}
+    try:
+        with open(file_path, "r", encoding="utf-8") as file:
+            data = json.load(file)
+    except (FileNotFoundError, json.JSONDecodeError):
+        
+        pass
+
+    data[key] = value
+
+    with open(file_path, "w", encoding="utf-8") as file:
+        json.dump(data, file, indent=4)
+
+    create_log(level="info", message=f"W konfiguracji dodano wpis {key}:{value}")#Inserting key into config file
 def put_key(key:str,value:bytes):
     path = "venv/config/conf.json"
     if os.path.exists(path):
