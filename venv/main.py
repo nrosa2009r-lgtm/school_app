@@ -1,6 +1,5 @@
 import asyncio
 from database.db import create_db
-from services.users import add_user , del_user
 from security.sec import gen_key
 from config.conf import put_key ,get_data
 
