@@ -1,8 +1,8 @@
 import asyncio
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime,timezone
 from log.log_generator import create_log
-from sqlalchemy import ForeignKey, String, select,delete,update,DateTime,Numeric
+from sqlalchemy import ForeignKey, String, select,delete,update,DateTime,Numeric,DECIMAL
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine, AsyncSession
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column,relationship
 from config.conf import get_data
@@ -26,7 +26,7 @@ class Users(Base):
     email: Mapped[str] = mapped_column( nullable=False, unique=True)
     role: Mapped[str] = mapped_column(String(10), nullable=False)   #rootadmin/admin/teacher/student
     password: Mapped[str] = mapped_column(String(256), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
     is_active: Mapped[bool] = mapped_column(default=False)
     u_class: Mapped[str] = mapped_column(nullable=True)
 
@@ -46,10 +46,10 @@ class MenuItems(Base):
     name:Mapped[str] = mapped_column(nullable=False,unique=True)
     descryption:Mapped[Optional[str]] = mapped_column(String(500))
     image_url: Mapped[Optional[str]] = mapped_column(String(256))
-    price:Mapped[float] = mapped_column(Numeric(10,2),nullable=False)
-    prep_price:Mapped[float] = mapped_column(Numeric(10,2),nullable=True)
+    price:Mapped[DECIMAL] = mapped_column(Numeric(10,2),nullable=False)
+    prep_price:Mapped[DECIMAL] = mapped_column(Numeric(10,2),nullable=True)
     is_avelible:Mapped[bool] = mapped_column(default=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     category: Mapped["MenuCategories"] = relationship(back_populates="items")
     options:Mapped[List["MenuOptions"]] = relationship(back_populates="menu_item",cascade="all,delete-orphan")
