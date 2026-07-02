@@ -30,6 +30,9 @@ class Users(Base):
     is_active: Mapped[bool] = mapped_column(default=False)
     u_class: Mapped[str] = mapped_column(nullable=True)
 
+    activation_code: Mapped[Optional[str]] = mapped_column(nullable=True)
+    code expires_at: Mapped[Optional[str]] = mapped_column(DateTime,nullable=True)
+
 class MenuCategories(Base):
     __tablename__ = "menu_categories"
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -134,3 +137,49 @@ async def dell_in_db(user_id :int):
     async with async_session() as session:
         await session.execute(query)
         await session.commit()
+
+
+async def veryfy_and_activate_user(email:str,code:str) ->bool:
+    query = select(Users).where(Users.is_active ==False)
+
+    async with async_session() as session:
+        result = await session.execute(query)
+        inactivate_users = result.scalars().all()
+
+        target_user = None
+
+        for user in inactivate_users:
+            try:
+                if decrypt_data(user.email) == email:
+                    target_user = user
+                    break
+            except Exception:
+                continue
+        
+        if not target_user:
+            create_log(level="warning", message=f"Próba aktywacji konta, które nie istnieje lub jest już aktywne: {email}")
+            return False
+
+        
+        if target_user.activation_code != encrypt_data(code):
+            create_log(level="warning", message=f"Podano niepoprawny kod aktywacyjny dla: {email}")
+            return False
+        
+
+        now = datetime.now(timezone.utc)
+
+        expires_at = target_user.code_expires_at
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        
+        if now > expires_at:
+            create_log(level="warning", message=f"Kod aktywacyjny dla {email} wygasł.")
+            return False
+
+        target_user.is_active = True
+        target_user.activation_code = None 
+        target_user.code_expires_at = None
+
+        await session.commit()
+        create_log(level="info", message=f"Konto użytkownika {email} zostało pomyślnie aktywowane.")
+        return True

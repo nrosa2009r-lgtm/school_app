@@ -1,11 +1,12 @@
 from fastapi import FastAPI, APIRouter,HTTPException,status
 from pydantic import BaseModel,EmailStr,Field
 from services.users import add_user,del_user
+from database.db import veryfy_and_activate_user
 from log.log_generator import create_log
 
 app = FastAPI(title="Users Menagment API")
 router = APIRouter(
-    prefix="/zsl_app",
+    prefix="/user",
     tags=["User/Users"]
 )
 
@@ -14,6 +15,10 @@ class UserCreate(BaseModel):
     last_name: str = Field(...,min_length=2)
     email:EmailStr
     password:str
+
+class UserActivate(BaseModel):
+    email: EmailStr
+    code: str = Field(..., min_length=6, max_length=6)
 
 @app.get("/")
 async def test():
@@ -55,9 +60,27 @@ async def add_usr(user: UserCreate):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Niespodziewany błąd"
         )
-    
 
+@router.post("/activate_user",status_code=status.HTTP_200_OK)
+async def activate_usr(data:UserActivate):
+    try:
+        succes = await veryfy_and_activate_user(email=data.email, code=data.code)
 
+        if  not succes:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Podany kod jest nieprawidłowy, wygasł lub konto jest już aktywne."
+            )
+        return {"status": "success", "message": "Konto zostało pomyślnie aktywowane. Możesz się zalogować."}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        create_log(level="error", message=f"Błąd podczas aktywacji użytkownika {data.email}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Niespodziewany błąd serwera"
+        )
 
 
 
