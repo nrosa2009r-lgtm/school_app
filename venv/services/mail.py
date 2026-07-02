@@ -26,6 +26,7 @@ async def send_activation_email(email_to: EmailStr) -> str:
     message = MessageSchema(
         subject="Kod do aktywacji Twojego konta",
         recipients=[NameEmail(name="Użytkownik", email=str(email_to))],
+        body=content,
         subtype=MessageType.plain
     )
 

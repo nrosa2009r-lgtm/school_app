@@ -31,7 +31,7 @@ class Users(Base):
     u_class: Mapped[str] = mapped_column(nullable=True)
 
     activation_code: Mapped[Optional[str]] = mapped_column(nullable=True)
-    code expires_at: Mapped[Optional[str]] = mapped_column(DateTime,nullable=True)
+    code_expires_at: Mapped[Optional[str]] = mapped_column(DateTime,nullable=True)
 
 class MenuCategories(Base):
     __tablename__ = "menu_categories"
@@ -161,9 +161,17 @@ async def veryfy_and_activate_user(email:str,code:str) ->bool:
             return False
 
         
-        if target_user.activation_code != encrypt_data(code):
+        # Odszyfrowujemy kod z bazy danych i porównujemy z surowym kodem od użytkownika
+        try:
+             decrypted_code = decrypt_data(target_user.activation_code)
+        except Exception:
+            create_log(level="error", message=f"Nie udało się odszyfrować kodu dla: {email}")
+            return False
+
+        if decrypted_code != code:
             create_log(level="warning", message=f"Podano niepoprawny kod aktywacyjny dla: {email}")
             return False
+
         
 
         now = datetime.now(timezone.utc)
