@@ -58,3 +58,6 @@ def decrypt_data(data):
 
 def gen_activation_code() -> str:
     return "".join(secrets.choice("0123456789") for _ in range(6))
+
+def gen_jwt_token()->bytes:
+    return secrets.token_bytes(32)

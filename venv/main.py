@@ -1,6 +1,6 @@
 import asyncio
 from database.db import create_db
-from security.sec import gen_key
+from security.sec import gen_key,gen_jwt_token
 from config.conf import put_key ,get_data
 
 async def main():
@@ -8,7 +8,11 @@ async def main():
     existing_key = get_data("MASTER_KEY")
     if not existing_key:
         put_key(key="MASTER_KEY", value=gen_key())
-        
+    
+    existing_jwt_key = get_data("JWT_SECRET_KEY")
+    if not existing_jwt_key:
+        put_key(key="JWT_SECRET_KEY", value=gen_jwt_token())
+
     await create_db()
 
 if __name__ == "__main__":
