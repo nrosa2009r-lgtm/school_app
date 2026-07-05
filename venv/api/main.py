@@ -24,7 +24,8 @@ app.state.limiter = limiter
 
 @app.exception_handler(RateLimitExceeded)
 async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
-    create_log(level="warning", message=f"Przekroczono limit zapytań dla IP: {request.client.host}")
+    client_ip = request.client.host if request.client else "Nieznane IP"
+    create_log(level="warning", message=f"Przekroczono limit zapytań dla IP: {client_ip}")
     return _rate_limit_exceeded_handler(request, exc)
 
 
@@ -165,4 +166,31 @@ async def login_usr(data: UserLogin, request: Request, response: Response):
         )
 
 
+
+@router.post("/logout",status_code=status.HTTP_200_OK)
+async def logout_usr(response:Response):
+    try:
+        response.delete_cookie(
+            key="access_token",
+            httponly=True,
+            secure=False,
+            samesite="lax"
+        )
+        return {"status": "success", "message": "Wylogowano pomyślnie."}
+    except Exception as e:
+        create_log(level="error", message=f"Błąd podczas wylogowywania: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Niespodziewany błąd serwera podczas wylogowywania"
+        )
+    
+
+
+
+
+
+
+
+
+    
 app.include_router(router=router)
