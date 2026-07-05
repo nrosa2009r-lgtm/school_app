@@ -1,5 +1,5 @@
 from security.sec import hash_password, password_validator, encrypt_data ,verify_password
-from database.db import Users,async_session , is_exist,get_user_data_for_del,dell_in_db
+from database.db import Users,async_session , is_exist,get_user_data_for_del,dell_in_db ,get_login_data
 from log.log_generator import create_log
 from datetime import timedelta,datetime,timezone
 from services.mail import send_activation_email
@@ -56,4 +56,21 @@ async def del_user(email: str, password: str):
     create_log(level="info", message=f"Usunięto użytkownika {email} z bazy danych!")
 
 
-async def login_user(email,password):
+async def login_user(email:str,password:str) -> int | Users:
+    user = await get_login_data(email)
+
+    if user is None:
+        create_log(level="warning", message=f"Nieudana próba logowania: e-mail {email} nie istnieje.")
+        return 0
+    
+    if not user.is_active:
+        create_log(level="warning", message=f"Próba logowania na nieaktywne konto: {email}.")
+        return 1
+    
+    if not verify_password(password,user.password):
+        create_log(level="warning", message=f"Błędne hasło dla użytkownika: {email}.")
+        return 2
+    
+    create_log(level="info",message=f"Użytkownik {email} zalogował się pomyślnie.")
+
+    return user

@@ -191,3 +191,21 @@ async def veryfy_and_activate_user(email:str,code:str) ->bool:
         await session.commit()
         create_log(level="info", message=f"Konto użytkownika {email} zostało pomyślnie aktywowane.")
         return True
+    
+async def get_login_data(email:str) -> Optional[Users]:
+    query = select(Users)
+
+    async with async_session() as session:
+        result await session.execute(query)
+        users = result.scalars().all()
+
+        
+    for user in users:
+        try:
+            if decrypt_data(user.email) == email:
+                return user
+        except Exception:
+            continue
+
+    return None
+        
