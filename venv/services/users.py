@@ -56,3 +56,4 @@ async def del_user(email: str, password: str):
     create_log(level="info", message=f"Usunięto użytkownika {email} z bazy danych!")
 
 
+async def login_user(email,password):
