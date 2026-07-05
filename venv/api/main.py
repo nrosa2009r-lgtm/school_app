@@ -6,8 +6,8 @@ from log.log_generator import create_log
 
 app = FastAPI(title="Users Menagment API")
 router = APIRouter(
-    prefix="/user",
-    tags=["User/Users"]
+    prefix="/api",
+    tags=["Actions for User"]
 )
 
 class UserCreate(BaseModel):
