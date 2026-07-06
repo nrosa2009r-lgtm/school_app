@@ -2,8 +2,9 @@ from slowapi import Limiter
 from slowapi.extension import _rate_limit_exceeded_handler 
 from slowapi.util import get_remote_address
 from config.conf import get_data
+from security.sec import get_current_user
 from slowapi.errors import RateLimitExceeded
-from fastapi import FastAPI, APIRouter, HTTPException, status, Request, Response
+from fastapi import FastAPI, APIRouter, HTTPException, status, Request, Response, Depends
 from pydantic import BaseModel, EmailStr, Field
 from services.users import add_user, del_user, login_user
 from database.db import veryfy_and_activate_user, Users  # Dodano import klasyfikacji bazy danych
@@ -185,6 +186,16 @@ async def logout_usr(response:Response):
         )
     
 
+@router.get("/me",status_code=status.HTTP_200_OK)
+async def get_my_profile(current_user: dict=Depends(get_current_user)):
+    return {
+        "status": "success",
+        "message": "Autoryzacja powiodła się. Jesteś zalogowany!",
+        "user_data": {
+            "id": current_user["id"],
+            "role": current_user["role"]
+        }
+    }
 
 
 
@@ -192,5 +203,7 @@ async def logout_usr(response:Response):
 
 
 
-    
+
+
+
 app.include_router(router=router)
