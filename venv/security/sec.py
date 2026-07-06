@@ -1,8 +1,11 @@
 import string
+import jwt
 import secrets
 import bcrypt as bct
 from config.conf import get_data
 from cryptography.fernet import Fernet
+from fastapi import Request,HTTPException,status
+from datetime import datetime,timezone
 
 # Hashing password
 def hash_password(password) ->str:
@@ -61,3 +64,35 @@ def gen_activation_code() -> str:
 
 def gen_jwt_token()->bytes:
     return secrets.token_bytes(32)
+
+def get_current_user(request: Request) ->dict:
+    token = request.cookies.get("access_token")
+
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Brak autoryzacjii.Zaloguj się."
+        )
+    
+    try:
+        jwt_secret = get_data("JWT_SECRET_KEY")
+        payload = jwt.decode(token, jwt_secret,algorithms=["HS256"])
+
+        exp = payload.get("exp")
+        if exp and datetime.now(timezone.utc).timestamp() > exp:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Obecny token wygasł. Zaloguj sie ponownie."
+            )
+
+        return {
+            "id": payload.get("sub"),
+            "role": payload.get("role")
+        }
+
+    except jwt.PyJWKError:
+
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Nieprawidłowy token."
+        )
