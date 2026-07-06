@@ -109,34 +109,37 @@ async def activate_usr(data: UserActivate):
 @limiter.limit("5/minute")
 async def login_usr(data: UserLogin, request: Request, response: Response):
     try:
-        resoult = await login_user(email=data.email, password=data.password)
+        # Zmieniono błędne 'resoult' na prawidłowe 'result'
+        result = await login_user(email=data.email, password=data.password)
 
-        if resoult == 0 or resoult == 2:
-            # NAJPIERW logujemy do pliku tekstowego
-            create_log(level="warning", message=f"Użytkownik {data.email} podał nieprawidłowy email lub hasło.")
-            # DOPIERO POTEM przerywamy działanie za pomocą raise
+        if result == 0:
+            create_log(level="warning", message=f"Nieudana próba logowania: e-mail {data.email} nie istnieje.")
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="Nieprawidłowy email lub hasło"   
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Nieprawidłowy email lub hasło"
+            )
+            
+        elif result == 2:
+            create_log(level="warning", message=f"Użytkownik {data.email} podał nieprawidłowe hasło.")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Nieprawidłowy email lub hasło"
             )
 
-        elif resoult == 1:
+        elif result == 1:
             create_log(level="warning", message=f"Użytkownik {data.email} próbował wejść na nieaktywne konto.")
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Konto nie jest aktywne. Zweryfikuj swój adres e-mail."
             )
 
-        # Usunięcie błędu Pylance (Type Guard)
-        # Informujemy edytor kodu, że w tym miejscu resoult to na 100% instancja Users, a nie int
-        if isinstance(resoult, int):
+        if isinstance(result, int):
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Wewnętrzny błąd przetwarzania logowania"
             )
 
         payload = {
-            "sub": str(resoult.id),
-            "role": resoult.role,
+            "sub": str(result.id), # Poprawiono z resoult.id
+            "role": result.role,   # Poprawiono z resoult.role
             "exp": datetime.now(timezone.utc) + timedelta(minutes=30)
         }
         jwt_secret = get_data("JWT_SECRET_KEY")
@@ -145,16 +148,16 @@ async def login_usr(data: UserLogin, request: Request, response: Response):
         response.set_cookie(
             key="access_token",
             value=token,
-            httponly=True,       # Blokuje dostęp skryptom JS (ochrona przed XSS)
-            secure=False,        # Ustaw na True na produkcji (wymaga HTTPS)
-            samesite="lax",      # Zabezpieczenie przed CSRF przy standardowej nawigacji
-            max_age=1800         # Żywotność ciasteczka w sekundach (30 minut)
+            httponly=True,       
+            secure=False,        
+            samesite="lax",      
+            max_age=1800         
         )
 
         return {
             "status": "success", 
             "message": "Zalogowano pomyślnie.",
-            "user_role": resoult.role  # Przekazujemy rolę, by Flet wiedział, jakie UI załadować
+            "user_role": result.role  # Poprawiono z resoult.role
         }
 
     except HTTPException:
@@ -165,8 +168,6 @@ async def login_usr(data: UserLogin, request: Request, response: Response):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Niespodziewany błąd serwera"
         )
-
-
 
 @router.post("/logout",status_code=status.HTTP_200_OK)
 async def logout_usr(response:Response):

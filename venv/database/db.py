@@ -6,7 +6,7 @@ from sqlalchemy import ForeignKey, String, select,delete,update,DateTime,Numeric
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine, AsyncSession
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column,relationship
 from config.conf import get_data
-from security.sec import decrypt_data, hash_password,encrypt_data
+from security.sec import decrypt_data, hash_password,encrypt_data,hash_email
 
 # Create engine and session
 db_url = get_data("DATABASE_URL")
@@ -19,19 +19,21 @@ class Base(DeclarativeBase):
 # Create Database Structure
 class Users(Base):
     __tablename__ = "users"
-    # Users parameters
+    
     id: Mapped[int] = mapped_column(primary_key=True, nullable=False)
-    name: Mapped[str] = mapped_column( nullable=False)
-    last_name: Mapped[str] = mapped_column( nullable=True)
-    email: Mapped[str] = mapped_column( nullable=False, unique=True)
-    role: Mapped[str] = mapped_column(String(10), nullable=False)   #rootadmin/admin/teacher/student
+    name: Mapped[str] = mapped_column(nullable=False)
+    last_name: Mapped[str] = mapped_column(nullable=True)
+    
+    email: Mapped[str] = mapped_column(nullable=False) # Usunięto unique=True stąd, bo Fernet daje różne ciągi
+    email_hash: Mapped[str] = mapped_column(nullable=False, unique=True) # NOWOŚĆ: unikalny indeks do szukania w SQL
+    
+    role: Mapped[str] = mapped_column(String(10), nullable=False)
     password: Mapped[str] = mapped_column(String(256), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
     is_active: Mapped[bool] = mapped_column(default=False)
     u_class: Mapped[str] = mapped_column(nullable=True)
-
     activation_code: Mapped[Optional[str]] = mapped_column(nullable=True)
-    code_expires_at: Mapped[Optional[str]] = mapped_column(DateTime,nullable=True)
+    code_expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True) # Poprawiono typ na datetime
 
 class MenuCategories(Base):
     __tablename__ = "menu_categories"
@@ -68,24 +70,30 @@ class MenuOptions(Base):
     menu_item: Mapped["MenuItems"] = relationship(back_populates="options")
 
 
-# Chcking is user exist
-async def is_exist(data:str,parm:str) -> bool:
 
-    query = select(Users)  
-    
-    async with async_session.begin() as session:
-        result = await session.execute(query)
-        users = result.scalars().all()
-    
-    #Serching in db
-    for user in users:
-        encrypted_value = getattr(user, parm)
-        try:
-            if decrypt_data(encrypted_value) == data:
-                return True
-        except Exception:
-            continue 
-            
+
+
+
+# Chcking is user exist
+async def is_exist(data: str, parm: str) -> bool:
+    async with async_session() as session:
+        if parm == "email":
+            # Błyskawiczne wyszukiwanie po hashu SHA-256
+            target_hash = hash_email(data)
+            query = select(Users).where(Users.email_hash == target_hash)
+            result = await session.execute(query)
+            return result.scalars().first() is not None
+        elif parm == "name":
+            # Dla imienia musimy sprawdzić rekordy, jeśli nazwy też są zaszyfrowane
+            query = select(Users)
+            result = await session.execute(query)
+            users = result.scalars().all()
+            for user in users:
+                try:
+                    if decrypt_data(user.name) == data:
+                        return True
+                except Exception:
+                    continue
     return False
 
         
@@ -139,29 +147,19 @@ async def dell_in_db(user_id :int):
         await session.commit()
 
 
-async def veryfy_and_activate_user(email:str,code:str) ->bool:
-    query = select(Users).where(Users.is_active ==False)
+async def veryfy_and_activate_user(email: str, code: str) -> bool:
+    target_hash = hash_email(email)
+    # Szukamy użytkownika bezpośrednio po jego hashu e-mail
+    query = select(Users).where(Users.email_hash == target_hash, Users.is_active == False)
 
     async with async_session() as session:
         result = await session.execute(query)
-        inactivate_users = result.scalars().all()
-
-        target_user = None
-
-        for user in inactivate_users:
-            try:
-                if decrypt_data(user.email) == email:
-                    target_user = user
-                    break
-            except Exception:
-                continue
+        target_user = result.scalars().first()
         
         if not target_user:
-            create_log(level="warning", message=f"Próba aktywacji konta, które nie istnieje lub jest już aktywne: {email}")
+            create_log(level="warning", message=f"Próba aktywacji konta, które nie istnieje lub jest już aktywne: {email}") [cite: 23, 24]
             return False
 
-        
-        # Odszyfrowujemy kod z bazy danych i porównujemy z surowym kodem od użytkownika
         try:
              decrypted_code = decrypt_data(target_user.activation_code)
         except Exception:
@@ -172,40 +170,30 @@ async def veryfy_and_activate_user(email:str,code:str) ->bool:
             create_log(level="warning", message=f"Podano niepoprawny kod aktywacyjny dla: {email}")
             return False
 
-        
-
         now = datetime.now(timezone.utc)
-
         expires_at = target_user.code_expires_at
-        if expires_at.tzinfo is None:
+        if expires_at and expires_at.tzinfo is None:
             expires_at = expires_at.replace(tzinfo=timezone.utc)
         
-        if now > expires_at:
+        if expires_at and now > expires_at:
             create_log(level="warning", message=f"Kod aktywacyjny dla {email} wygasł.")
             return False
 
         target_user.is_active = True
-        target_user.activation_code = None 
+        target_user.activation_code = None
         target_user.code_expires_at = None
 
         await session.commit()
         create_log(level="info", message=f"Konto użytkownika {email} zostało pomyślnie aktywowane.")
         return True
-    
-async def get_login_data(email:str) -> Optional[Users]:
-    query = select(Users)
+
+
+async def get_login_data(email: str) -> Optional[Users]:
+    # Zastępujemy starą pętlę for bezpośrednim zapytaniem SQL
+    target_hash = hash_email(email)
+    query = select(Users).where(Users.email_hash == target_hash)
 
     async with async_session() as session:
         result = await session.execute(query)
-        users = result.scalars().all()
-
-        
-    for user in users:
-        try:
-            if decrypt_data(user.email) == email:
-                return user
-        except Exception:
-            continue
-
-    return None
+        return result.scalars().first()
         

@@ -2,6 +2,7 @@ import string
 import jwt
 import secrets
 import bcrypt as bct
+import hashlib
 from config.conf import get_data
 from cryptography.fernet import Fernet
 from fastapi import Request,HTTPException,status
@@ -96,3 +97,7 @@ def get_current_user(request: Request) ->dict:
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Nieprawidłowy token."
         )
+    
+def hash_email(email: str) -> str:
+    """Tworzy powtarzalny skrót SHA-256 z adresu e-mail."""
+    return hashlib.sha256(email.strip().lower().encode("utf-8")).hexdigest()

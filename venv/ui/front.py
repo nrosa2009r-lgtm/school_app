@@ -44,20 +44,26 @@ async def main(page: ft.Page):
 
     # Obsługa procesu logowania
     async def handle_login(e):
-        error_message.value = ""
+        # 1. Blokujemy natychmiast przycisk przed ponownym kliknięciem i czyścimy błędy
         login_button.disabled = True
+        error_message.value = ""
         page.update()
         
-        response = await api_client.login(email=email_field.value, password=password_field.value)
-        
-        if response.get("status") == "success":
-            # Sukces: Wyczyszczenie błędu i przejście dalej
-            error_message.value = "Zalogowano pomyślnie!"
-            error_message.color = ft.Colors.GREEN_400
-            # Tutaj możesz dodać przekierowanie, np.: page.go("/dashboard")
-        else:
-            # Błąd: Wyświetlenie komunikatu z API lub domyślnego
-            error_message.value = response.get("message", "Niepoprawny e-mail lub hasło.")
+        try:
+            # 2. Wysyłamy zapytanie do API
+            response = await api_client.login(email=email_field.value, password=password_field.value)
+            
+            if response.get("status") == "success":
+                error_message.value = "Zalogowano pomyślnie!"
+                error_message.color = ft.Colors.GREEN_400
+                # Miejsce na ewentualne przekierowanie: page.go("/dashboard")
+            else:
+                error_message.value = response.get("message", "Niepoprawny e-mail lub hasło.")
+                error_message.color = ft.Colors.RED_400
+                # Odblokowujemy przycisk wyłącznie w przypadku błędu, by użytkownik mógł spróbować ponownie
+                login_button.disabled = False
+        except Exception:
+            error_message.value = "Błąd połączenia z serwerem."
             error_message.color = ft.Colors.RED_400
             login_button.disabled = False
         

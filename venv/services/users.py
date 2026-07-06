@@ -1,5 +1,5 @@
-from security.sec import hash_password, password_validator, encrypt_data ,verify_password
-from database.db import Users,async_session , is_exist,get_user_data_for_del,dell_in_db ,get_login_data
+from security.sec import hash_password, password_validator, encrypt_data ,verify_password, hash_email
+from database.db import Users, async_session, is_exist, get_user_data_for_del, dell_in_db, get_login_data
 from log.log_generator import create_log
 from datetime import timedelta,datetime,timezone
 from services.mail import send_activation_email
@@ -16,11 +16,14 @@ async def add_user(name:str,last_name:str,email:str,password:str):
 
         expire_time = datetime.now(timezone.utc) + timedelta(minutes=5)
         
-        
+        clean_email = email.strip().lower() # Standaryzacja adresu e-mail
+        ack_code = await send_activation_email(email_to=clean_email)
+
         new_user = Users(
             name=encrypt_data(name.lower()),
             last_name=encrypt_data(last_name.lower()),
-            email=encrypt_data(email),
+            email=encrypt_data(clean_email), # Szyfrowana treść do ewentualnego odczytu
+            email_hash=hash_email(clean_email), # NOWOŚĆ: Stały skrót do wyszukiwania SQL
             role="user",
             password=hash_password(password),
             is_active=False,
