@@ -11,7 +11,7 @@ async def main():
     
     existing_jwt_key = get_data("JWT_SECRET_KEY")
     if not existing_jwt_key:
-        put_key(key="JWT_SECRET_KEY", value=gen_jwt_token())
+        put_data(key="JWT_SECRET_KEY", value=gen_jwt_token().hex())
 
     ip_adres = get_data("SERVER_IP")
     if not ip_adres:

@@ -3,5 +3,7 @@
     "MASTER_KEY": "hixwqJQQhNksORYoO_-btBCEvu1CQvqn78B4Tl2wKxs=",
     "SENDER_MAIL": "nrpl350@gmail.com",
     "SENDER_PASSWORD": "mupd hemf edpd yyvz",
-    "SENDER_SERVER": "smtp.gmail.com"
+    "SENDER_SERVER": "smtp.gmail.com",
+    "JWT_SECRET_KEY": "6a47123711ea6ba224051b631961405b014c474d8a82424b978e8d93b740375a",
+    "SERVER_IP": "http://127.0.0.1:8000"
 }

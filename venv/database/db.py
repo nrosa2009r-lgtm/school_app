@@ -196,7 +196,7 @@ async def get_login_data(email:str) -> Optional[Users]:
     query = select(Users)
 
     async with async_session() as session:
-        result await session.execute(query)
+        result = await session.execute(query)
         users = result.scalars().all()
 
         
