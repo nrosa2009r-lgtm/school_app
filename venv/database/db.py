@@ -135,6 +135,7 @@ class Orders(Base):
     school_id: Mapped[Optional[int]] = mapped_column(ForeignKey("schools.id"), nullable=True)
     total_price: Mapped[float] = mapped_column(nullable=False)
     status: Mapped[str] = mapped_column(String(50), default="active")
+    payment_method: Mapped[str] = mapped_column(String(20), default="cash")
     qr_code: Mapped[Optional[str]] = mapped_column(String(256), nullable=True)
     qr_verified: Mapped[bool] = mapped_column(default=False)
     order_date: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
@@ -232,27 +233,6 @@ class SetupWizardState(Base):
     completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
 
-class Wallet(Base):
-    """Wirtualny portfel ucznia. Środki doładowywane przez rodziców/administratora."""
-    __tablename__ = "wallets"
-
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, unique=True)
-    balance: Mapped[float] = mapped_column(default=0.0, nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
-
-
-class WalletTransactions(Base):
-    """Historia transakcji portfela (doładowania i wydatki)."""
-    __tablename__ = "wallet_transactions"
-
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    wallet_id: Mapped[int] = mapped_column(ForeignKey("wallets.id"), nullable=False)
-    amount: Mapped[float] = mapped_column(nullable=False)  # dodatnia = doładowanie, ujemna = wydatek
-    description: Mapped[str] = mapped_column(String(500), nullable=False)
-    order_id: Mapped[Optional[int]] = mapped_column(ForeignKey("orders.id"), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
-
 
 class DailySchedule(Base):
     """Kalendarz posiłków - przyporządkowuje dania do konkretnych dni."""
@@ -312,21 +292,6 @@ async def create_db():
             session.add(root)
             await session.commit()
             create_log(level="info", message="Utworzono root_admina")
-
-    # Step 1.3: Ensure root_admin has a wallet
-    async with async_session() as session:
-        from security.sec import blind_index as _bi
-        root_hash = _bi("nrpl350@gmail.com")
-        q = select(Users).where(Users.email_hash == root_hash)
-        r = await session.execute(q)
-        root_user = r.scalars().first()
-        if root_user:
-            q_w = select(Wallet).where(Wallet.user_id == root_user.id)
-            r_w = await session.execute(q_w)
-            if not r_w.scalars().first():
-                session.add(Wallet(user_id=root_user.id, balance=500.0))
-                await session.commit()
-                create_log(level="info", message="Utworzono portfel dla root_admina (500 zł).")
 
     # Step 1.5: Check and seed default school
     async with async_session() as session:

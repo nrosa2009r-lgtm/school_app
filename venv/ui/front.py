@@ -313,12 +313,20 @@ async def main(page: ft.Page):
             controls.append(ft.Row([ft.Text("RAZEM:", size=18, weight=ft.FontWeight.BOLD),
                                     ft.Text(f"{total_price:.2f} zł", size=20, weight=ft.FontWeight.BOLD, color=ft.Colors.GREEN_700)],
                                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN))
+            payment_dd = ft.Dropdown(
+                label="Metoda płatności", width=200, value="cash",
+                options=[
+                    ft.dropdown.Option("cash", "💵 Gotówka"),
+                    ft.dropdown.Option("card", "💳 Karta"),
+                    ft.dropdown.Option("blik", "📱 BLIK"),
+                ]
+            )
             checkout_btn = ft.ElevatedButton("Finalizuj Zamówienie", icon=ft.Icons.CHECK, bgcolor=ft.Colors.GREEN_600, color=ft.Colors.WHITE)
             clear_btn = ft.OutlinedButton("Wyczyść koszyk", icon=ft.Icons.CANCEL)
 
             async def handle_checkout(e):
                 await trigger_pulse(checkout_btn, page)
-                r = await api_client.checkout()
+                r = await api_client.checkout(payment_method=payment_dd.value)
                 if r.get("status") == "success":
                     app_state["cart_count"] = 0
                     page.snack_bar = ft.SnackBar(ft.Text("Zamówienie sfinalizowane!"), bgcolor=ft.Colors.GREEN_600)
@@ -336,6 +344,7 @@ async def main(page: ft.Page):
 
             checkout_btn.on_click = handle_checkout
             clear_btn.on_click = handle_clear
+            controls.append(payment_dd)
             controls.append(ft.Row([clear_btn, checkout_btn], alignment=ft.MainAxisAlignment.SPACE_BETWEEN))
         return ft.Column(controls, spacing=12, scroll=ft.ScrollMode.AUTO, expand=True)
 
@@ -423,23 +432,8 @@ async def main(page: ft.Page):
         page.update()
         users_res = await api_client.admin_get_users()
         logs_res = await api_client.admin_get_logs()
-        wallet_res = await api_client.get_wallet()
 
         controls = [ft.Text("Panel Administratora & Zero Trust Audit", size=24, weight=ft.FontWeight.BOLD)]
-
-        # Portfel
-        if wallet_res.get("status") == "success":
-            w = wallet_res.get("wallet", {})
-            controls.append(ft.Text(f"💰 Portfel: {w.get('balance', 0):.2f} zł", size=16, weight=ft.FontWeight.BOLD))
-            topup_amt = ft.TextField(label="Kwota doładowania (zł)", width=150, value="50")
-            topup_btn = ft.ElevatedButton("Doładuj")
-            async def handle_topup(e):
-                r = await api_client.topup_wallet(float(topup_amt.value or 0))
-                page.snack_bar = ft.SnackBar(ft.Text(r.get("message", "")))
-                page.snack_bar.open = True
-                page.update()
-            topup_btn.on_click = handle_topup
-            controls.append(ft.Row([topup_amt, topup_btn], spacing=10))
 
         # Użytkownicy
         controls.append(ft.Text("Zarządzanie Rolami:", size=18, weight=ft.FontWeight.BOLD))

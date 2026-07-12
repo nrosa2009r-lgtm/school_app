@@ -52,12 +52,12 @@ if "%1"=="--check-or-setup" goto :check_setup_mode
 
 REM Normalny start: FastAPI w jednym oknie, Flet UI w drugim
 echo [INFO] Startowanie FastAPI (backend)...
-start "School Catering - API Server" cmd /k "cd /d %~dp0 && venv\Scripts\python.exe -m uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload"
+start "School Catering - API Server" cmd /k "cd /d %~dp0 && set PYTHONPATH=%~dp0 && venv\Scripts\python.exe -m uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload"
 
 timeout /t 3 /nobreak >nul
 
 echo [INFO] Startowanie Flet UI (frontend)...
-start "School Catering - UI Client" cmd /k "cd /d %~dp0 && venv\Scripts\flet.exe run ui\front.py"
+start "School Catering - UI Client" cmd /k "cd /d %~dp0 && set PYTHONPATH=%~dp0 && venv\Scripts\flet.exe run ui\front.py"
 
 echo.
 echo [OK] Aplikacja uruchomiona!
@@ -89,10 +89,10 @@ goto :normal_start_impl
 
 :normal_start_impl
 echo [INFO] Startowanie FastAPI...
-start "School Catering - API Server" cmd /k "cd /d %~dp0 && venv\Scripts\python.exe -m uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload"
+start "School Catering - API Server" cmd /k "cd /d %~dp0 && set PYTHONPATH=%~dp0 && venv\Scripts\python.exe -m uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload"
 timeout /t 3 /nobreak >nul
 echo [INFO] Startowanie Flet UI...
-start "School Catering - UI Client" cmd /k "cd /d %~dp0 && venv\Scripts\flet.exe run ui\front.py"
+start "School Catering - UI Client" cmd /k "cd /d %~dp0 && set PYTHONPATH=%~dp0 && venv\Scripts\flet.exe run ui\front.py"
 echo [OK] Aplikacja uruchomiona!
 
 :end

@@ -2,9 +2,10 @@ from slowapi import Limiter
 from slowapi.extension import _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
-from config.conf import get_data
+from config.conf import get_data, put_data
 from security.sec import get_current_user, require_roles, decrypt_data, encrypt_data
 from fastapi import FastAPI, APIRouter, HTTPException, status, Request, Response, Depends
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr, Field
 from typing import List, Optional
 from services.users import add_user, del_user, login_user
@@ -13,13 +14,30 @@ from log.log_generator import create_log
 from services.cart import cart_manager, is_past_cutoff
 from datetime import datetime, timezone, timedelta
 import jwt
+import secrets
 from sqlalchemy import select, update
+from sqlalchemy.orm import selectinload
 
 app = FastAPI(title="School Catering API")
 router = APIRouter(prefix="/api", tags=["School Catering API"])
 
+# CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
+
+# Auto-generate JWT secret if not present
+_jwt_secret = get_data("JWT_SECRET_KEY")
+if not _jwt_secret:
+    _jwt_secret = secrets.token_hex(32)
+    put_data("JWT_SECRET_KEY", _jwt_secret)
 
 @app.exception_handler(RateLimitExceeded)
 async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
@@ -78,6 +96,9 @@ class CartRemoveRequest(BaseModel):
     item_id: int
     quantity: Optional[int] = None
     option_ids: Optional[List[int]] = None
+
+class CheckoutRequest(BaseModel):
+    payment_method: str = "cash"
 
 class RoleUpdateRequest(BaseModel):
     role: str
@@ -319,7 +340,7 @@ async def clear_cart(current_user: dict = Depends(get_current_user)):
 
 @router.post("/cart/checkout", status_code=status.HTTP_201_CREATED)
 @router.post("/orders", status_code=status.HTTP_201_CREATED)
-async def checkout_order(current_user: dict = Depends(get_current_user)):
+async def checkout_order(data: CheckoutRequest = CheckoutRequest(), current_user: dict = Depends(get_current_user)):
     if is_past_cutoff():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Minęła godzina graniczna (09:00 rano). System blokuje składanie nowych zamówień na dziś.")
     user_id = int(current_user["id"])
@@ -327,9 +348,10 @@ async def checkout_order(current_user: dict = Depends(get_current_user)):
     if not cart or not cart.items:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Koszyk jest pusty lub wygasł.")
 
+    payment_method = data.payment_method if data.payment_method in ("cash", "card", "blik") else "cash"
     total_price = cart.total_price()
     async with async_session.begin() as session:
-        new_order = Orders(user_id=user_id, total_price=total_price, status="active")
+        new_order = Orders(user_id=user_id, total_price=total_price, status="active", payment_method=payment_method)
         session.add(new_order)
         await session.flush()
 
@@ -344,8 +366,8 @@ async def checkout_order(current_user: dict = Depends(get_current_user)):
             session.add(o_item)
         await session.commit()
 
-    create_log(level="info", message=f"Użytkownik ID {user_id} sfinalizował zamówienie ID {new_order.id} na kwotę {total_price:.2f} zł.")
-    return {"status": "success", "message": "Zamówienie sfinalizowane pomyślnie.", "order_id": new_order.id}
+    create_log(level="info", message=f"Użytkownik ID {user_id} sfinalizował zamówienie ID {new_order.id} na kwotę {total_price:.2f} zł ({payment_method}).")
+    return {"status": "success", "message": "Zamówienie sfinalizowane pomyślnie.", "order_id": new_order.id, "payment_method": payment_method}
 
 # --- ORDERS ENDPOINTS ---
 @router.get("/orders", status_code=status.HTTP_200_OK)
@@ -355,23 +377,20 @@ async def get_orders(current_user: dict = Depends(get_current_user)):
 
     async with async_session() as session:
         if role in ["admin", "rootadmin"]:
-            query = select(Orders).order_by(Orders.created_at.desc())
+            query = select(Orders).options(selectinload(Orders.items)).order_by(Orders.created_at.desc())
         else:
-            query = select(Orders).where(Orders.user_id == user_id).order_by(Orders.created_at.desc())
+            query = select(Orders).options(selectinload(Orders.items)).where(Orders.user_id == user_id).order_by(Orders.created_at.desc())
         res = await session.execute(query)
-        orders = res.scalars().all()
+        orders = res.scalars().unique().all()
 
         output = []
         for o in orders:
-            query_items = select(OrderItems).where(OrderItems.order_id == o.id)
-            res_items = await session.execute(query_items)
-            o_items = res_items.scalars().all()
-
             output.append({
                 "id": o.id,
                 "user_id": o.user_id,
                 "total_price": float(o.total_price),
                 "status": o.status,
+                "payment_method": o.payment_method,
                 "created_at": o.created_at.isoformat() if o.created_at else "",
                 "items": [
                     {
@@ -379,7 +398,7 @@ async def get_orders(current_user: dict = Depends(get_current_user)):
                         "quantity": i.quantity,
                         "price": float(i.price),
                         "option_names": i.option_names
-                    } for i in o_items
+                    } for i in o.items
                 ]
             })
         return {"status": "success", "orders": output}
@@ -664,40 +683,6 @@ async def kitchen_analytics(current_user: dict = Depends(require_roles("admin", 
 
         return {"status": "success", "analytics": {"order_statuses": statuses, "top_items": top_items}}
 
-# ──────────────────────── WALLET ────────────────────────
-
-@router.get("/wallet", status_code=status.HTTP_200_OK)
-async def get_wallet(current_user: dict = Depends(get_current_user)):
-    from database.db import Wallet
-    async with async_session() as session:
-        q = select(Wallet).where(Wallet.user_id == int(current_user["id"]))
-        r = await session.execute(q)
-        w = r.scalars().first()
-        if not w:
-            return {"status": "success", "wallet": {"balance": 0.0, "exists": False}}
-        return {"status": "success", "wallet": {"balance": w.balance, "exists": True, "user_id": w.user_id}}
-
-class WalletTopUp(BaseModel):
-    amount: float = Field(..., gt=0)
-    user_id: Optional[int] = None
-
-@router.post("/wallet/topup", status_code=status.HTTP_200_OK)
-async def topup_wallet(data: WalletTopUp, current_user: dict = Depends(require_roles("admin", "rootadmin"))):
-    from database.db import Wallet, WalletTransactions
-    target_uid = data.user_id or int(current_user["id"])
-    async with async_session.begin() as session:
-        q = select(Wallet).where(Wallet.user_id == target_uid)
-        r = await session.execute(q)
-        w = r.scalars().first()
-        if not w:
-            w = Wallet(user_id=target_uid, balance=0.0)
-            session.add(w)
-            await session.flush()
-        w.balance += data.amount
-        session.add(WalletTransactions(wallet_id=w.id, amount=data.amount, description=f"Doładowanie: {data.amount:.2f} zł"))
-        await session.commit()
-    create_log(level="info", message=f"Doładowano portfel user ID {target_uid} o {data.amount:.2f} zł")
-    return {"status": "success", "message": f"Doładowano {data.amount:.2f} zł", "new_balance": w.balance}
 
 # ──────────────────────── DAILY SCHEDULE ────────────────────────
 

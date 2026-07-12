@@ -142,9 +142,12 @@ class ApiClientActions:
         except Exception as e:
             return {"status": "error", "message": f"Błąd połączenia: {str(e)}"}
 
-    async def checkout(self) -> dict:
+    async def checkout(self, payment_method: str = "cash") -> dict:
         try:
-            response = await self.client.post("/api/cart/checkout")
+            response = await self.client.post(
+                "/api/cart/checkout",
+                json={"payment_method": payment_method}
+            )
             if response.status_code in [200, 201]:
                 return response.json()
             else:
@@ -324,27 +327,6 @@ class ApiClientActions:
                 return {"status": "error", "message": "Błąd weryfikacji TOTP"}
         except Exception as e:
             return {"status": "error", "message": f"Błąd: {str(e)}"}
-
-    async def get_wallet(self) -> dict:
-        try:
-            response = await self.client.get("/api/wallet")
-            if response.status_code == 200:
-                return response.json()
-            return {"status": "error", "message": "Błąd portfela"}
-        except Exception as e:
-            return {"status": "error", "message": str(e)}
-
-    async def topup_wallet(self, amount: float, user_id: Optional[int] = None) -> dict:
-        try:
-            body = {"amount": amount}
-            if user_id:
-                body["user_id"] = user_id
-            response = await self.client.post("/api/wallet/topup", json=body)
-            if response.status_code == 200:
-                return response.json()
-            return {"status": "error", "message": "Błąd doładowania"}
-        except Exception as e:
-            return {"status": "error", "message": str(e)}
 
     async def get_schedule(self, school_id: int = 1, date_from: str = "", date_to: str = "") -> dict:
         try:

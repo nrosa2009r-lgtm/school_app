@@ -120,7 +120,7 @@ async def setup_wizard():
     put_data("SETUP_COMPLETED", "true")
 
     # Zapisanie admina do bazy
-    from database.db import async_session, Users, Schools, Wallet
+    from database.db import async_session, Users, Schools
     from sqlalchemy import select
 
     async with async_session.begin() as session:
@@ -149,13 +149,6 @@ async def setup_wizard():
             )
             session.add(user)
             await session.commit()
-
-            # Portfel dla admina
-            q = select(Wallet).where(Wallet.user_id == user.id)
-            r = await session.execute(q)
-            if not r.scalars().first():
-                session.add(Wallet(user_id=user.id, balance=500.0))
-                await session.commit()
             print("✅ Konto administratora utworzone.")
         else:
             print("ℹ️  Administrator już istnieje w bazie.")

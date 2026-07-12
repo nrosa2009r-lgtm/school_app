@@ -9,7 +9,7 @@ from security.sec import (
     generate_totp_secret, generate_totp_uri, get_totp_code, verify_totp,
     generate_qr_data, verify_qr_data, check_haveibeenpwned
 )
-from database.db import create_db, Users, MenuCategories, MenuItems, MenuOptions, Orders, async_session, is_exist, Schools, Wallet, Allergens, DietaryTags, DailySchedule
+from database.db import create_db, Users, MenuCategories, MenuItems, MenuOptions, Orders, async_session, is_exist, Schools, Allergens, DietaryTags, DailySchedule
 from services.users import add_user, login_user, del_user
 from services.cart import cart_manager, CartItem, is_past_cutoff, CUTOFF_HOUR
 from log.log_generator import create_log
@@ -180,7 +180,7 @@ def test_qr_generation_and_verification():
 
 
 @pytest.mark.asyncio
-async def test_wallet_and_school_models():
+async def test_school_and_menu_models():
     async with async_session() as session:
         from sqlalchemy import select
 
@@ -190,19 +190,13 @@ async def test_wallet_and_school_models():
         schools = r_s.scalars().all()
         assert len(schools) > 0
 
-        # Check wallet exists for root
+        # Check root user exists
         from security.sec import blind_index
         root_hash = blind_index("nrpl350@gmail.com")
         users_q = select(Users).where(Users.email_hash == root_hash)
         users_r = await session.execute(users_q)
         root = users_r.scalars().first()
         assert root is not None
-
-        wallet_q = select(Wallet).where(Wallet.user_id == root.id)
-        wallet_r = await session.execute(wallet_q)
-        wallet = wallet_r.scalars().first()
-        assert wallet is not None
-        assert wallet.balance >= 0
 
         # Check dietary tags and allergens
         tags_q = select(DietaryTags)
@@ -220,6 +214,33 @@ async def test_wallet_and_school_models():
         sched_r = await session.execute(sched_q)
         schedule = sched_r.scalars().all()
         assert len(schedule) > 0
+
+        # Verify Orders model has payment_method column
+        from sqlalchemy import inspect as sa_inspect
+        mapper = sa_inspect(Orders)
+        column_names = [c.key for c in mapper.columns]
+        assert "payment_method" in column_names, "Orders should have payment_method column"
+
+        # Test creating order with payment_method
+        test_order = Orders(user_id=root.id, total_price=25.50, status="active", payment_method="card")
+        session.add(test_order)
+        await session.commit()
+
+        # Verify it was saved with payment_method
+        saved = await session.get(Orders, test_order.id)
+        assert saved.payment_method == "card"
+
+        # Test default payment_method is cash
+        test_order2 = Orders(user_id=root.id, total_price=10.00, status="active")
+        session.add(test_order2)
+        await session.commit()
+        saved2 = await session.get(Orders, test_order2.id)
+        assert saved2.payment_method == "cash"
+
+        # Cleanup test orders
+        await session.delete(saved)
+        await session.delete(saved2)
+        await session.commit()
 
 
 def test_cutoff_time_logic():
