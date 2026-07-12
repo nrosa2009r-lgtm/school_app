@@ -57,7 +57,7 @@ start "School Catering - API Server" cmd /k "cd /d %~dp0 && venv\Scripts\python.
 timeout /t 3 /nobreak >nul
 
 echo [INFO] Startowanie Flet UI (frontend)...
-start "School Catering - UI Client" cmd /k "cd /d %~dp0 && venv\Scripts\python.exe -m flet run ui/front.py"
+start "School Catering - UI Client" cmd /k "cd /d %~dp0 && venv\Scripts\flet.exe run ui\front.py"
 
 echo.
 echo [OK] Aplikacja uruchomiona!
@@ -92,7 +92,7 @@ echo [INFO] Startowanie FastAPI...
 start "School Catering - API Server" cmd /k "cd /d %~dp0 && venv\Scripts\python.exe -m uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload"
 timeout /t 3 /nobreak >nul
 echo [INFO] Startowanie Flet UI...
-start "School Catering - UI Client" cmd /k "cd /d %~dp0 && venv\Scripts\python.exe -m flet run ui/front.py"
+start "School Catering - UI Client" cmd /k "cd /d %~dp0 && venv\Scripts\flet.exe run ui\front.py"
 echo [OK] Aplikacja uruchomiona!
 
 :end
