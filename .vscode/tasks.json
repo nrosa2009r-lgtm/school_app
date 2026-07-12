@@ -1,0 +1,108 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "start-backend",
+      "type": "shell",
+      "command": "${workspaceFolder}/venv/Scripts/python.exe",
+      "args": [
+        "-m", "uvicorn",
+        "api.main:app",
+        "--host", "0.0.0.0",
+        "--port", "8000",
+        "--reload"
+      ],
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "dedicated",
+        "showReuseMessage": false,
+        "clear": false,
+        "group": "school-app"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "start-frontend",
+      "type": "shell",
+      "command": "${workspaceFolder}/venv/Scripts/flet.exe",
+      "args": ["run", "ui/front.py"],
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "dedicated",
+        "showReuseMessage": false,
+        "clear": false,
+        "group": "school-app"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "start-flet",
+      "type": "shell",
+      "command": "start",
+      "args": ["cmd", "/c", "${workspaceFolder}/venv/Scripts/flet.exe", "run", "ui/front.py"],
+      "windows": {
+        "command": "start",
+        "args": ["cmd", "/c", "${workspaceFolder}/venv/Scripts/flet.exe", "run", "ui/front.py"]
+      },
+      "presentation": {
+        "reveal": "silent"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "stop-flet",
+      "type": "shell",
+      "command": "taskkill",
+      "args": ["/F", "/IM", "flet.exe"],
+      "windows": {
+        "command": "taskkill",
+        "args": ["/F", "/IM", "flet.exe"]
+      },
+      "presentation": {
+        "reveal": "silent"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "🚀 Uruchom wszystko",
+      "dependsOrder": "parallel",
+      "dependsOn": ["start-backend", "start-frontend"],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "🧪 Uruchom testy",
+      "type": "shell",
+      "command": "${workspaceFolder}/venv/Scripts/python.exe",
+      "args": ["-m", "pytest", "tests/test_school_app.py", "-v"],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "📦 Zainstaluj zależności",
+      "type": "shell",
+      "command": "${workspaceFolder}/venv/Scripts/pip.exe",
+      "args": ["install", "-r", "requirements.txt"],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "problemMatcher": []
+    }
+  ]
+}
