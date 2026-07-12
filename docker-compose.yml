@@ -1,0 +1,38 @@
+# ============================================================
+#  School Catering Application - Docker Compose
+#  Wersja: 2.0 Enterprise
+# ============================================================
+
+version: "3.9"
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: school-catering-api
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite+aiosqlite:///venv/database/database.db
+      - SERVER_IP=http://localhost:8000
+      - TZ=Europe/Warsaw
+    volumes:
+      - school_data:/app/venv/database
+      - school_config:/app/venv/config
+      - school_logs:/app/venv/log
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  school_data:
+    driver: local
+  school_config:
+    driver: local
+  school_logs:
+    driver: local
