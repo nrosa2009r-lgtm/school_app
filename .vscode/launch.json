@@ -1,0 +1,53 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "🔧 Backend (Uvicorn)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": [
+        "api.main:app",
+        "--host", "0.0.0.0",
+        "--port", "8000",
+        "--reload"
+      ],
+      "jinja": true,
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "🖥️ Frontend (Flet)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "ui/front.py",
+      "console": "integratedTerminal",
+      "args": []
+    },
+    {
+      "name": "🚀 Uruchom wszystko (Backend + Frontend)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": [
+        "api.main:app",
+        "--host", "0.0.0.0",
+        "--port", "8000",
+        "--reload"
+      ],
+      "console": "integratedTerminal",
+      "preLaunchTask": "start-flet",
+      "postDebugTask": "stop-flet"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "🚀 Backend + Frontend",
+      "configurations": ["🔧 Backend (Uvicorn)", "🖥️ Frontend (Flet)"],
+      "presentation": {
+        "hidden": false,
+        "group": "school-app",
+        "order": 1
+      }
+    }
+  ]
+}
